@@ -1,8 +1,9 @@
 import Head from 'next/head'
 import { Container, Card, Row, Text } from "@nextui-org/react";
 import { Header } from '@/components/Header';
+import fs from 'fs/promises'
 
-export default function Home() {
+export default function Home({ comics }) {
   return (
     <>
       <Head>
@@ -31,4 +32,25 @@ export default function Home() {
       </main>
     </>
   )
+}
+
+export async function getStaticProps(context){
+  const files = await fs.readdir("./comics")
+  //console.log(files)
+  const latestComicsFiles = files.slice(-8, files.length)
+  //console.log(lastComics)
+
+  const promisesReadFiles = latestComicsFiles.map(async (file) =>{
+    const content = await fs.readFile(`./comics/${file}`, "utf-8")
+    return JSON.parse(content)
+  })
+
+  const latestComics = await Promise.all(promisesReadFiles)
+  console.log(latestComics)
+
+  return {
+    props: {
+      comics: []
+    }
+  }
 }
