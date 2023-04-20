@@ -1,9 +1,11 @@
 import Head from "next/head"
 import Image from "next/image"
 import { Header } from "@/components/Header"
-import { readFile } from "fs/promises"
+import { readFile, stat, readdir } from "fs/promises"
+import Link from "next/link"
+import { basename } from "path"
 
-export default function Comic({ id, img, alt, title, width, heigth }){
+export default function Comic({ id, img, alt, title, width = 600, heigth = 600,  hasPrevius, hasNext, nextId, prevId  }){
   return(
     <>
       <Head>
@@ -16,31 +18,63 @@ export default function Comic({ id, img, alt, title, width, heigth }){
       <Header />
 
       <main>
+        <section className="max-w-lg m-auto">
+          <h1 className="font-bold text-center">{title}</h1>
+        <Image width={width} height={heigth} src={img} alt={alt} />
+        <p>{alt}</p>
 
+        <section className="w-full flex justify-between my-4">
+          {hasPrevius && <Link className="py-1 px-4 bg-gray-900 text-white rounded-sm" href={`/comics/${prevId}`}>Previus</Link>}
+          {hasNext && <Link className="py-1 px-4 bg-gray-900 text-white rounded-sm" href={`/comics/${nextId}`}>Next</Link>}
+        </section>
+
+        </section>
       </main>
     </>
   )
 }
 
 export async function getStaticPaths(){
+  const files = await readdir("./comics", "utf-8")
+  
+
+  const paths = files.map(file => {
+    const id = basename(file, ".json")
+    return{ params: { id } }
+  })
+
   return{
-    paths: [
-      { params: { id: '2500' } }, 
-    ],
+    paths,
     fallback: false,
   }
-
 }
 
-export async function getStaticPorps({ params }){
+export async function getStaticProps({ params }){
   const { id } = params
 
   const content = await readFile(`./comics/${id}.json`, "utf-8")
   const comic = JSON.parse(content)
 
+  //Pagination
+  const idNuember = +id
+  const prevId = idNuember -1
+  const nextId = idNuember +1
+
+  const [prevResult, nextResult] = await Promise.allSettled([
+    stat(`./comics/${prevId}.json`),
+    stat(`./comics/${nextId}.json`)
+  ])
+
+  const hasPrevius = prevResult.status === "fulfilled"
+  const hasNext = nextResult.status === "fulfilled"
+
   return {
     props: {
-     ...comic
+     ...comic,
+     hasPrevius,
+     hasNext,
+     nextId,
+     prevId
     }
   }
 
